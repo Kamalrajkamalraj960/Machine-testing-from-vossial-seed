@@ -1,93 +1,95 @@
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-// Register User
-const registerUser = async (req, res) => {
+// Generate JWT
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: '30d',
+  });
+};
+
+// @desc    Register new user
+// @route   POST /api/auth/register
+// @access  Public
+const registerUser = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    // Check existing user
+    if (!name || !email || !password) {
+      res.status(400);
+      throw new Error('Please add all fields');
+    }
+
+    // Check if user exists
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({
-        message: "User already exists",
-      });
+      res.status(400);
+      throw new Error('User already exists');
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     // Create user
-    await User.create({
+    const user = await User.create({
       name,
       email,
-      password: hashedPassword,
+      password,
     });
 
-    // IMPORTANT:
-    // Do NOT login automatically
-    // Do NOT generate token here
-
-    res.status(201).json({
-      success: true,
-      message: "Account created successfully. Please login.",
-    });
-
+    if (user) {
+      res.status(201).json({
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(400);
+      throw new Error('Invalid user data');
+    }
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    next(error);
   }
 };
 
-// Login User
-const loginUser = async (req, res) => {
+// @desc    Authenticate a user
+// @route   POST /api/auth/login
+// @access  Public
+const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
+    // Check for user email
     const user = await User.findOne({ email });
 
-    if (!user) {
-      return res.status(400).json({
-        message: "Invalid credentials",
-      });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(400).json({
-        message: "Invalid credentials",
-      });
-    }
-
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.status(200).json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
+    if (user && (await user.matchPassword(password))) {
+      res.json({
+        _id: user.id,
         name: user.name,
         email: user.email,
-      },
-    });
-
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(401);
+      throw new Error('Invalid credentials');
+    }
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    next(error);
+  }
+};
+
+// @desc    Get user data
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = async (req, res, next) => {
+  try {
+    res.status(200).json(req.user);
+  } catch (error) {
+    next(error);
   }
 };
 
 module.exports = {
   registerUser,
   loginUser,
+  getMe,
 };
