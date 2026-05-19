@@ -14,26 +14,25 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !email || !password) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-    
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-
-    const success = await register(name, email, password);
-    if (success) {
-      toast.success('Registration successful');
-      navigate('/');
+    try {
+      const res = await api.post("/auth/register", {
+        name,
+        email,
+        password,
+      });
+      toast.success(res.data.message);
+      // Redirect to login page 
+      navigate("/login");
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Registration failed"
+      );
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-200 dark:border-slate-700"

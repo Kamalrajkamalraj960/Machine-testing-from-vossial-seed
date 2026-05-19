@@ -13,21 +13,25 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-
-    const success = await login(email, password);
-    if (success) {
-      toast.success('Logged in successfully');
-      navigate('/');
+    try {
+      const res = await api.post("/auth/login", {
+        email,
+        password,
+      });
+      // Save token 
+      localStorage.setItem("token", res.data.token);
+      toast.success("Login successful");
+      navigate("/");
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Login failed"
+      );
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border border-slate-200 dark:border-slate-700"
