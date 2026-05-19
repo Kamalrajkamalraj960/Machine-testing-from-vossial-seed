@@ -12,8 +12,16 @@ connectDB();
 
 const app = express();
 
+// CORS Configuration
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://taskify-machine-testing-from-vossia.vercel.app"
+  ],
+  credentials: true
+}));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 
 // Routes
@@ -26,5 +34,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(
+    `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`
+  );
 });
